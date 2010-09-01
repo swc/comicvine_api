@@ -1,9 +1,11 @@
 from setuptools import setup
 setup(
 name = 'comicvine_api',
+url = 'http://github.com/swc/comicvine_api',
 version='1.0',
 
 author='swc/Steve',
+author_email='iam@attractive.com',
 description='Interface to the comicvine.com API',
 license='GPLv2',
 

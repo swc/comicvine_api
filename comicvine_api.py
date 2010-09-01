@@ -52,12 +52,33 @@ lastTimeout = None
 def log():
     return logging.getLogger("comicvine_api")
 
-
+def levenshtein_distance(first, second):
+    """Find the Levenshtein distance between two strings."""
+    if len(first) > len(second):
+        first, second = second, first
+    if len(second) == 0:
+        return len(first)
+    first_length = len(first) + 1
+    second_length = len(second) + 1
+    distance_matrix = [[0] * second_length for x in range(first_length)]
+    for i in range(first_length):
+       distance_matrix[i][0] = i
+    for j in range(second_length):
+       distance_matrix[0][j]=j
+    for i in xrange(1, first_length):
+        for j in range(1, second_length):
+            deletion = distance_matrix[i-1][j] + 1
+            insertion = distance_matrix[i][j-1] + 1
+            substitution = distance_matrix[i-1][j-1]
+            if first[i-1] != second[j-1]:
+                substitution += 1
+            distance_matrix[i][j] = min(insertion, deletion, substitution)
+    return distance_matrix[first_length-1][second_length-1]
+    
 class SeriesContainer(dict):
     """Simple dict that holds a collection of Series instances
     """
     pass
-
 
 class Series(dict):
     """Holds a dict of issues, and series data.
@@ -330,7 +351,7 @@ class Comicvine:
         # http://comicvine.com/wiki/index.php/Programmers_API
         self.config['base_url'] = "http://api.comicvine.com"
 
-        self.config['url_getSeries'] = u"%(base_url)s/search/?api_key=%(apikey)s&query=%%s&resource=volume" % self.config
+        self.config['url_getSeries'] = u"%(base_url)s/search/?api_key=%(apikey)s&query=%%s&resources=volume&offset=%%s&field_list=name,id" % self.config
 
         self.config['url_issInfo'] = u"%(base_url)s/issue/%%s/?api_key=%(apikey)s" % self.config
 
@@ -443,26 +464,40 @@ class Comicvine:
         return data
     #end _cleanData
 
-    def _getSeries(self, series):
+    def _getSeries(self, seriesname):
         """This searches TheTVDB.com for the series name,
         If a custom_ui UI is configured, it uses this to select the correct
         series. If not, and interactive == True, ConsoleUI is used, if not
         BaseUI is used to select the first result.
         """
-        series = urllib.quote(series.encode("utf-8"))
-        log().debug("Searching for series %s" % series)
-        seriesEt = self._getetsrc(self.config['url_getSeries'] % (series))
+        print seriesname
+        seriesnameclean = urllib.quote(seriesname.encode("utf-8"))
+        log().debug("Searching for series %s" % seriesnameclean)
+        
+        offset = -20
+        limit = 20
+        resultcount = 1
         allSeries = []
-        serieslist = seriesEt.findall("results/volume")
-        for series in serieslist:
-            result = dict((k.tag.lower(), k.text) for k in series.getchildren())
-            result['id'] = int(result['id'])
-            result['seriesname'] = result['name']
-            result['lid'] = '7'
-            log().debug('Found series %(seriesname)s' % result)
-            allSeries.append(result)
-        #end for series
-
+        
+        while (offset + limit < resultcount):
+	    	offset = offset + 20
+	    	seriesEt = self._getetsrc(self.config['url_getSeries'] % (seriesnameclean, offset))
+	    	serieslist = seriesEt.findall("results/volume")
+	    	
+	    	for series in serieslist:
+	    	    resultcount = resultcount + 1
+	    	    result = dict((k.tag.lower(), k.text) for k in series.getchildren())
+	    	    result['id'] = int(result['id'])
+	    	    result['seriesname'] = result['name']
+	    	    result['match_score'] = levenshtein_distance( seriesname, result['seriesname'] )
+	    	    log().debug('Found series %(seriesname)s' % result)
+	    	    allSeries.append(result)
+	    	#end for series
+	    #end while
+        
+        from operator import itemgetter
+        allSeriesSorted = sorted(allSeries, key=itemgetter('match_score'))
+			
         if len(allSeries) == 0:
             log().debug('Series result returned zero')
             raise comicvine_seriesnotfound("Series-name search returned zero results (cannot find series on Comic Vine)")
@@ -480,7 +515,7 @@ class Comicvine:
             #end if config['interactive]
         #end if custom_ui != None
 
-        return ui.selectSeries(allSeries)
+        return ui.selectSeries(allSeriesSorted)
 
     #end _getSeries
 
@@ -624,10 +659,9 @@ def main():
     import logging
     logging.basicConfig(level=logging.DEBUG)
 
-    c = Comicvine(interactive=True, cache=True, credits=False)
+    c = Comicvine(interactive=True, cache=False, credits=False)
 
-    print c['Y: The Last Man']
-    print c['Y: The Last Man'][1]
+    print c['air']
     
 if __name__ == '__main__':
     main()
