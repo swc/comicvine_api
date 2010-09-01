@@ -1,5 +1,5 @@
-# `comicvine_api` and `comicnamer`
-# Modified from `tvdb_api' and `tvnamer`
+# `comicvine_api`
+# Modified from `tvdb_api'
 
 `comicvine_api` is an easy to use interface to [comicvine.com][comicvine]
 

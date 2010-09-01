@@ -4,7 +4,7 @@ name = 'comicvine_api',
 version='1.0',
 
 author='swc/Steve',
-description='Interface to comicvine.com',
+description='Interface to the comicvine.com API',
 license='GPLv2',
 
 long_description="""\
