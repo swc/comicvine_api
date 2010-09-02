@@ -2,7 +2,7 @@ from setuptools import setup
 setup(
 name = 'comicvine_api',
 url = 'http://github.com/swc/comicvine_api',
-version='1.02',
+version='1.03',
 
 author='swc/Steve',
 author_email='iam@attractive.com',
