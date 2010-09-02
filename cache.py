@@ -13,7 +13,7 @@ Modified from http://github.com/dbr/comicvine_api
 from __future__ import with_statement
 
 __author__ = "Samus"
-__version__ = "1.0"
+__version__ = "1.01"
 
 import os
 import time

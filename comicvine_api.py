@@ -17,7 +17,7 @@ Example usage:
 'Unmanned'
 """
 __author__ = "swc/Steve"
-__version__ = "1.0"
+__version__ = "1.02"
 
 import os
 import re
@@ -586,7 +586,12 @@ class Comicvine:
         volumeTag=m.group('volName')
         
         m = re.search('page=(?P<last>\d*)&amp;sort=issue_number\">Last</a>',siteDetailSrc)
-        last=int(m.group('last'))
+        
+        if hasattr(m, "last"):
+            last=int(m.group('last'))
+        else:
+            last=1
+
         while (page < last):
         	page = page + 1
         	log().debug('Loading site detail page %d' % (page))

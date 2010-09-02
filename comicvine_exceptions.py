@@ -11,7 +11,7 @@ Modified from http://github.com/dbr/tvdb_api
 """
 
 __author__ = "swc/Steve"
-__version__ = "1.0"
+__version__ = "1.01"
 
 __all__ = ["comicvine_error", "comicvine_userabort", "comicvine_seriesnotfound", "comicvine_issuenotfound", "comicvine_attributenotfound"]
 

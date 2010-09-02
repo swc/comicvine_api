@@ -2,7 +2,7 @@ from setuptools import setup
 setup(
 name = 'comicvine_api',
 url = 'http://github.com/swc/comicvine_api',
-version='1.0',
+version='1.02',
 
 author='swc/Steve',
 author_email='iam@attractive.com',
@@ -17,11 +17,11 @@ Basic usage is:
 
 >>> import comicvine_api
 >>> c = comicvine_api.Comicvine()
->>> iss = c['My Name Is Earl'][22]
+>>> iss = c['Y: The Last Man'][1]
 >>> iss
-<Issue 22 - Stole a Badge>
+<Issue 1 - Unmanned>
 >>> iss['issuename']
-u'Stole a Badge'
+u'Unmanned'
 """,
 
 py_modules = ['comicvine_api', 'comicvine_ui', 'comicvine_exceptions', 'cache'],

@@ -45,7 +45,7 @@ Then to use it..
 """
 
 __author__ = "swc/Steve"
-__version__ = "1.0"
+__version__ = "1.01"
 
 import logging
 import warnings
