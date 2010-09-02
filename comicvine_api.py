@@ -17,7 +17,7 @@ Example usage:
 'Unmanned'
 """
 __author__ = "swc/Steve"
-__version__ = "1.03"
+__version__ = "1.04"
 
 import os
 import re
@@ -587,7 +587,7 @@ class Comicvine:
         
         m = re.search('page=(?P<last>\d*)&amp;sort=issue_number\">Last</a>',siteDetailSrc)
         
-        if m.group('last'):
+        if m is not None:
             last=int(m.group('last'))
         else:
             last=1
@@ -666,7 +666,7 @@ def main():
 
     c = Comicvine(interactive=True, cache=False, credits=False)
 
-    print c['air']
+    print c['Air']
     
 if __name__ == '__main__':
     main()
