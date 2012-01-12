@@ -6,7 +6,7 @@
 #license:Creative Commons GNU GPL v2
 # (http://creativecommons.org/licenses/GPL/2.0/)
 
-"""Contains included user interfaces for Comicvine series selection.
+"""Contains included user interfaces for Comicvine volume selection.
 Modified from http://github.com/dbr/tvdb_api
 
 A UI is a callback. A class, it's __init__ function takes two arguments:
@@ -15,33 +15,33 @@ A UI is a callback. A class, it's __init__ function takes two arguments:
 - log, which is Comicvine's logger instance (which uses the logging module). You can
 call log.info() log.warning() etc
 
-It must have a method "selectSeries", this is passed a list of dicts, each dict
-contains the the keys "name" (human readable series name), and "sid" (the series
+It must have a method "selectvolume", this is passed a list of dicts, each dict
+contains the the keys "name" (human readable volume name), and "sid" (the volume
 ID as on comicvine.com). For example:
 
 [{'name': u'Lost', 'sid': u'73739'},
  {'name': u'Lost Universe', 'sid': u'73181'}]
 
-The "selectSeries" method must return the appropriate dict, or it can raise
-comicvine_userabort (if the selection is aborted), comicvine_seriesnotfound (if the series
+The "selectvolume" method must return the appropriate dict, or it can raise
+comicvine_userabort (if the selection is aborted), comicvine_volumenotfound (if the volume
 cannot be found).
 
-A simple example callback, which returns a random series:
+A simple example callback, which returns a random volume:
 
 >>> import random
 >>> from comicvine_ui import BaseUI
 >>> class RandomUI(BaseUI):
-...    def selectSeries(self, allSeries):
+...    def selectvolume(self, allvolume):
 ...            import random
-...            return random.choice(allSeries)
+...            return random.choice(allvolume)
 
 Then to use it..
 
 >>> from comicvine_api import Comicvine
 >>> c = Comicvine(custom_ui = RandomUI)
->>> random_matching_series = c['Fables']
->>> type(random_matching_series)
-<class 'comicvine_api.Series'>
+>>> random_matching_volume = c['Fables']
+>>> type(random_matching_volume)
+<class 'comicvine_api.volume'>
 """
 
 __author__ = "swc/Steve"
@@ -66,38 +66,38 @@ class BaseUI:
                 "The self.log attribute will be removed in the next version")
             self.log = logging.getLogger(__name__)
 
-    def selectSeries(self, allSeries):
-        return allSeries[0]
+    def selectvolume(self, allvolume):
+        return allvolume[0]
 
 
 class ConsoleUI(BaseUI):
-    """Interactively allows the user to select a series from a console based UI
+    """Interactively allows the user to select a volume from a console based UI
     """
 
-    def _displaySeries(self, allSeries):
-        """Helper function, lists series with corresponding ID
+    def _displayvolume(self, allvolume):
+        """Helper function, lists volume with corresponding ID
         """
         print "ComicVine Search Results:"
-        for i, cseries in enumerate(allSeries[:6]):
-            i_series = i + 1 # Start at more human readable number 1 (not 0)
-            log().debug('Showing allSeries[%s], series %s)' % (i_series, allSeries[i]['seriesname']))
-            print "%s -> %s # http://api.comicvine.com/series/%s/" % (
-                i_series,
-                cseries['seriesname'].encode("UTF-8", "ignore"),
-                str(cseries['id'])
+        for i, cvolume in enumerate(allvolume[:6]):
+            i_volume = i + 1 # Start at more human readable number 1 (not 0)
+            log().debug('Showing allvolume[%s], volume %s)' % (i_volume, allvolume[i]['volumename']))
+            print "%s -> %s # http://api.comicvine.com/volume/%s/" % (
+                i_volume,
+                cvolume['volumename'].encode("UTF-8", "ignore"),
+                str(cvolume['id'])
             )
 
-    def selectSeries(self, allSeries):
-        self._displaySeries(allSeries)
+    def selectvolume(self, allvolume):
+        self._displayvolume(allvolume)
 
-        if len(allSeries) == 1:
+        if len(allvolume) == 1:
             # Single result, return it!
             print "Automatically selecting only result"
-            return allSeries[0]
+            return allvolume[0]
 
         if self.config['select_first'] is True:
             print "Automatically returning first search result"
-            return allSeries[0]
+            return allvolume[0]
 
         while True: # return breaks this loop
             try:
@@ -117,7 +117,7 @@ class ConsoleUI(BaseUI):
                     raise comicvine_userabort("User aborted ('q' quit command)")
                 elif ans == "?":
                     print "## Help"
-                    print "# Enter the number that corresponds to the correct series."
+                    print "# Enter the number that corresponds to the correct volume."
                     print "# ? - this help"
                     print "# q - abort comicnamer"
                 else:
@@ -125,11 +125,11 @@ class ConsoleUI(BaseUI):
             else:
                 log().debug('Trying to return ID: %d' % (selected_id))
                 try:
-                    return allSeries[ selected_id ]
+                    return allvolume[ selected_id ]
                 except IndexError:
-                    log().debug('Invalid series number entered!')
+                    log().debug('Invalid volume number entered!')
                     print "Invalid number (%s) selected!"
-                    self._displaySeries(allSeries)
+                    self._displayvolume(allvolume)
             #end try
         #end while not valid_input
 
