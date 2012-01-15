@@ -44,7 +44,7 @@ except ImportError:
 from cache import CacheHandler
 
 from comicvine_ui import BaseUI, ConsoleUI
-from comicvine_exceptions import (comicvine_error, comicvine_userabort, comicvine_seriesnotfound,
+from comicvine_exceptions import (comicvine_error, comicvine_userabort, comicvine_volumenotfound,
     comicvine_issuenotfound, comicvine_attributenotfound)
 
 lastTimeout = None
@@ -75,21 +75,21 @@ def levenshtein_distance(first, second):
             distance_matrix[i][j] = min(insertion, deletion, substitution)
     return distance_matrix[first_length-1][second_length-1]
     
-class SeriesContainer(dict):
-    """Simple dict that holds a collection of Series instances
+class volumeContainer(dict):
+    """Simple dict that holds a collection of volume instances
     """
     pass
 
-class Series(dict):
-    """Holds a dict of issues, and series data.
+class volume(dict):
+    """Holds a dict of issues, and volume data.
     """
     def __init__(self):
         dict.__init__(self)
         self.data = {}
 
     def __repr__(self):
-        return "<Series %s (containing %s issues)>" % (
-            self.data.get(u'seriesname', 'instance'),
+        return "<volume %s (containing %s issues)>" % (
+            self.data.get(u'volumename', 'instance'),
             len(self)
         )
 
@@ -99,7 +99,7 @@ class Series(dict):
             return dict.__getitem__(self, key)
 
         if key in self.data:
-            # Non-numeric request is for series-data
+            # Non-numeric request is for volume-data
             return dict.__getitem__(self.data, key)
 
         # Data wasn't found, raise appropriate error
@@ -113,7 +113,7 @@ class Series(dict):
 
     def search(self, term = None, key = None):
         """
-        Search all issues in series. Can search all data, or a specific key (for
+        Search all issues in volume. Can search all data, or a specific key (for
         example, issuename)
 
         Always returns an array (can be empty). First index contains the first
@@ -190,8 +190,8 @@ class Issue(dict):
         The key parameter can be used to limit the search to a specific element,
         for example, issuename.
         
-        This primarily for use use by Series.search. See
-        Series.search for further information on search
+        This primarily for use use by volume.search. See
+        volume.search for further information on search
 
         Simple example:
 
@@ -255,12 +255,12 @@ class Comicvine:
                 apikey = None,
                 forceConnect=False):
         """interactive (True/False):
-            When True, uses built-in console UI is used to select the correct series.
+            When True, uses built-in console UI is used to select the correct volume.
             When False, the first search result is used.
 
         select_first (True/False):
-            Automatically selects the first series search result (rather
-            than showing the user a list of more than one series).
+            Automatically selects the first volume search result (rather
+            than showing the user a list of more than one volume).
             Is overridden by interactive = False, or specifying a custom_ui
 
         debug (True/False) DEPRECATED:
@@ -275,8 +275,8 @@ class Comicvine:
             will use this as the cache location. If False, disables caching.
 
         credits (True/False):
-            Retrieves a list of the credits for a series. These are accessed
-            via the credits key of a Series(), for example:
+            Retrieves a list of the credits for a volume. These are accessed
+            via the credits key of a volume(), for example:
 
             >>> c = Comicvine(credits=True)
             >>> c['Y: The Last Man']['credits'][0]['name']
@@ -305,8 +305,8 @@ class Comicvine:
         if not forceConnect and lastTimeout != None and datetime.datetime.now() - lastTimeout < datetime.timedelta(minutes=1):
             raise comicvine_error("We recently timed out, so giving up early this time")
         
-        self.series = SeriesContainer() # Holds all Series classes
-        self.corrections = {} # Holds series-name to series_id mapping
+        self.volume = volumeContainer() # Holds all volume classes
+        self.corrections = {} # Holds volume-name to volume_id mapping
 
         self.config = {}
 
@@ -319,7 +319,7 @@ class Comicvine:
 
         self.config['custom_ui'] = custom_ui
 
-        self.config['interactive'] = interactive # prompt for correct series?
+        self.config['interactive'] = interactive # prompt for correct volume?
 
         self.config['select_first'] = select_first
 
@@ -351,11 +351,11 @@ class Comicvine:
         # http://comicvine.com/wiki/index.php/Programmers_API
         self.config['base_url'] = "http://api.comicvine.com"
 
-        self.config['url_getSeries'] = u"%(base_url)s/search/?api_key=%(apikey)s&query=%%s&resources=volume&offset=%%s&field_list=name,id" % self.config
+        self.config['url_getvolume'] = u"%(base_url)s/search/?api_key=%(apikey)s&query=%%s&resources=volume&offset=%%s&field_list=name,id" % self.config
 
         self.config['url_issInfo'] = u"%(base_url)s/issue/%%s/?api_key=%(apikey)s" % self.config
 
-        self.config['url_seriesInfo'] = u"%(base_url)s/volume/%%s/?api_key=%(apikey)s" % self.config
+        self.config['url_volumeInfo'] = u"%(base_url)s/volume/%%s/?api_key=%(apikey)s" % self.config
 
         self.config['url_siteDetail'] = u"%%s?sort=issue_number&page=%%s" % self.config
 
@@ -424,13 +424,13 @@ class Comicvine:
     #end _getetsrc
 
     def _setItem(self, sid, iss, attrib, value):
-        """Creates a new issue, creating Series() and
-        Issue()s as required. Called by _getSeriesData to populate series
+        """Creates a new issue, creating volume() and
+        Issue()s as required. Called by _getvolumeData to populate volume
 
         Since the nice-to-use comicvine[1][24]['name] interface
         makes it impossible to do comicvine[1][24]['name] = "name"
         and still be capable of checking if an issue exists
-        so we can raise comicvine_seriesnotfound, we have a slightly
+        so we can raise comicvine_volumenotfound, we have a slightly
         less pretty method of setting items.. but since the API
         is supposed to be read-only, this is the best way to
         do it!
@@ -438,19 +438,19 @@ class Comicvine:
         calls __getitem__ on comicvine[1], there is no way to check if
         comicvine.__dict__ should have a key "1" before we auto-create it
         """
-        if sid not in self.series:
-            self.series[sid] = Series()
-        if iss not in self.series[sid]:
-            self.series[sid][iss] = Issue()
-        self.series[sid][iss][attrib] = value
+        if sid not in self.volume:
+            self.volume[sid] = volume()
+        if iss not in self.volume[sid]:
+            self.volume[sid][iss] = Issue()
+        self.volume[sid][iss][attrib] = value
     #end _set_item
 
-    def _setSeriesData(self, sid, key, value):
-        """Sets self.series[sid] to a new Series instance, or sets the data
+    def _setvolumeData(self, sid, key, value):
+        """Sets self.volume[sid] to a new volume instance, or sets the data
         """
-        if sid not in self.series:
-            self.series[sid] = Series()
-        self.series[sid].data[key] = value
+        if sid not in self.volume:
+            self.volume[sid] = volume()
+        self.volume[sid].data[key] = value
 
     def _cleanData(self, data):
         """Cleans up strings returned by TheTVDB.com
@@ -464,43 +464,43 @@ class Comicvine:
         return data
     #end _cleanData
 
-    def _getSeries(self, seriesname):
-        """This searches TheTVDB.com for the series name,
+    def _getvolume(self, volumename):
+        """This searches TheTVDB.com for the volume name,
         If a custom_ui UI is configured, it uses this to select the correct
-        series. If not, and interactive == True, ConsoleUI is used, if not
+        volume. If not, and interactive == True, ConsoleUI is used, if not
         BaseUI is used to select the first result.
         """
-        print seriesname
-        seriesnameclean = urllib.quote(seriesname.encode("utf-8"))
-        log().debug("Searching for series %s" % seriesnameclean)
+        print volumename
+        volumenameclean = urllib.quote(volumename.encode("utf-8"))
+        log().debug("Searching for volume %s" % volumenameclean)
         
         offset = -20
         limit = 20
         resultcount = 1
-        allSeries = []
+        allvolume = []
         
         while (offset + limit < resultcount):
 	    	offset = offset + 20
-	    	seriesEt = self._getetsrc(self.config['url_getSeries'] % (seriesnameclean, offset))
-	    	serieslist = seriesEt.findall("results/volume")
+	    	volumeEt = self._getetsrc(self.config['url_getvolume'] % (volumenameclean, offset))
+	    	volumelist = volumeEt.findall("results/volume")
 	    	
-	    	for series in serieslist:
+	    	for volume in volumelist:
 	    	    resultcount = resultcount + 1
-	    	    result = dict((k.tag.lower(), k.text) for k in series.getchildren())
+	    	    result = dict((k.tag.lower(), k.text) for k in volume.getchildren())
 	    	    result['id'] = int(result['id'])
-	    	    result['seriesname'] = result['name']
-	    	    result['match_score'] = levenshtein_distance( seriesname, result['seriesname'] )
-	    	    log().debug('Found series %(seriesname)s' % result)
-	    	    allSeries.append(result)
-	    	#end for series
+	    	    result['volumename'] = result['name']
+	    	    result['match_score'] = levenshtein_distance( volumename, result['volumename'] )
+	    	    log().debug('Found volume %(volumename)s' % result)
+	    	    allvolume.append(result)
+	    	#end for volume
 	    #end while
         
         from operator import itemgetter
-        allSeriesSorted = sorted(allSeries, key=itemgetter('match_score'))
+        allvolumeSorted = sorted(allvolume, key=itemgetter('match_score'))
 			
-        if len(allSeries) == 0:
-            log().debug('Series result returned zero')
-            raise comicvine_seriesnotfound("Series-name search returned zero results (cannot find series on Comic Vine)")
+        if len(allvolume) == 0:
+            log().debug('volume result returned zero')
+            raise comicvine_volumenotfound("volume-name search returned zero results (cannot find volume on Comic Vine)")
 
         if self.config['custom_ui'] is not None:
             log().debug("Using custom UI %s" % (repr(self.config['custom_ui'])))
@@ -510,20 +510,20 @@ class Comicvine:
                 log().debug('Auto-selecting first search result using BaseUI')
                 ui = BaseUI(config = self.config)
             else:
-                log().debug('Interactively selecting series using ConsoleUI')
+                log().debug('Interactively selecting volume using ConsoleUI')
                 ui = ConsoleUI(config = self.config)
             #end if config['interactive]
         #end if custom_ui != None
 
-        return ui.selectSeries(allSeriesSorted)
+        return ui.selectvolume(allvolumeSorted)
 
-    #end _getSeries
+    #end _getvolume
 
     def _parseCredits(self, sid, iid, creditsEt):
         """Parsers credits XML, from
-        http://www.comicvine.com/api/[APIKEY]/volume/[SERIES ID]/credits.xml
+        http://www.comicvine.com/api/[APIKEY]/volume/[volume ID]/credits.xml
 
-        Credits are retrieved using c['series name]['credits'], for example:
+        Credits are retrieved using c['volume name]['credits'], for example:
 
         >>> c = Comicvine(credits = True)
         >>> credits = c['The Walking Dead'][1]['credits']
@@ -553,27 +553,27 @@ class Comicvine:
             cur_credits.append(curCredit)
         self._setItem(sid, iid, 'credits', cur_credits)
 
-    def _getSeriesData(self, sid):
-        """Takes a series ID, gets the issInfo URL and parses the TVDB
-        XML file into the series dict in layout:
-        series[series_id][issue_number]
+    def _getvolumeData(self, sid):
+        """Takes a volume ID, gets the issInfo URL and parses the TVDB
+        XML file into the volume dict in layout:
+        volume[volume_id][issue_number]
         """
 
-        # Parse series information
-        log().debug('Getting all series data for %s' % (sid))
-        seriesInfoEt = self._getetsrc(
-            self.config['url_seriesInfo'] % (sid)
+        # Parse volume information
+        log().debug('Getting all volume data for %s' % (sid))
+        volumeInfoEt = self._getetsrc(
+            self.config['url_volumeInfo'] % (sid)
         )
-        result = seriesInfoEt.findall("results")[0]
+        result = volumeInfoEt.findall("results")[0]
         for curInfo in result:
             tag = curInfo.tag.lower()
             value = curInfo.text
 
             #value = self._cleanData(value)
 
-            self._setSeriesData(sid, tag, value)
-        #end for series
-        self._setSeriesData(sid, 'seriesname', result.find('name').text)
+            self._setvolumeData(sid, tag, value)
+        #end for volume
+        self._setvolumeData(sid, 'volumename', result.find('name').text)
 
             
         #Get issue details
@@ -593,10 +593,10 @@ class Comicvine:
             last=1
 
         while (page < last):
-        	page = page + 1
-        	log().debug('Loading site detail page %d' % (page))
-        	siteDetailSrc = siteDetailSrc + self._loadUrl( self.config['url_siteDetail'] % (siteDetailUrl, page) )
-        	
+            page = page + 1
+            log().debug('Loading site detail page %d' % (page))
+            siteDetailSrc = siteDetailSrc + self._loadUrl( self.config['url_siteDetail'] % (siteDetailUrl, page) )
+            
         for m in re.finditer('(?ms)<div class=\"comic-container">.*?/37-(?P<iss_id>\d*)/.*?<span class=\"issue\">Issue #(?P<iss_no>\d*)</span>.*?</div>',siteDetailSrc):
             iss_id = int(m.group('iss_id'))
             iss_no = float(m.group('iss_no'))
@@ -611,13 +611,17 @@ class Comicvine:
         
         issues=result.find('issues')
         for curIssue in issues:
-        	iss_id=int(curIssue.find('id').text)
-        	iss_no=self.series[sid].search(iss_id, key='id')[0]['issue_number']
-        	self._setItem(sid, iss_no, 'issuename', curIssue.find('name').text)
-    #end _getSeriesData
+          iss_id=int(curIssue.find('id').text)
+          log().debug('iss_id: %d, sid: %d' % (iss_id, sid))
+          issue_datas = self.volume[sid].search(iss_id, key='id')
+          log().debug(str(issue_datas))
+          if (len(issue_datas) > 0):
+              iss_no=issue_datas[0]['issue_number']
+              self._setItem(sid, iss_no, 'issuename', curIssue.find('name').text)
+    #end _getvolumeData
 
     def _nameToSid(self, name):
-        """Takes series name, returns the correct series ID (if the series has
+        """Takes volume name, returns the correct volume ID (if the volume has
         already been grabbed), or grabs all issues and returns
         the correct SID.
         """
@@ -625,35 +629,35 @@ class Comicvine:
             log().debug('Correcting %s to %s' % (name, self.corrections[name]) )
             sid = self.corrections[name]
         else:
-            log().debug('Getting series %s' % (name))
-            selected_series = self._getSeries( name )
-            sname, sid = selected_series['seriesname'], selected_series['id']
-            log().debug('Got %(seriesname)s, id %(id)s' % selected_series)
+            log().debug('Getting volume %s' % (name))
+            selected_volume = self._getvolume( name )
+            sname, sid = selected_volume['volumename'], selected_volume['id']
+            log().debug('Got %(volumename)s, id %(id)s' % selected_volume)
 
             self.corrections[name] = sid
-            self._getSeriesData(selected_series['id'])
+            self._getvolumeData(selected_volume['id'])
         #end if name in self.corrections
         return sid
     #end _nameToSid
 
     def __getitem__(self, key):
-        """Handles comicvine_instance['seriesname'] calls.
-        The dict index should be the series id
+        """Handles comicvine_instance['volumename'] calls.
+        The dict index should be the volume id
         """
         if isinstance(key, (int, long)):
-            # Item is integer, treat as series id
-            if key not in self.series:
-                self._getSeriesData(key)
-            return self.series[key]
+            # Item is integer, treat as volume id
+            if key not in self.volume:
+                self._getvolumeData(key)
+            return self.volume[key]
         
         key = key.lower() # make key lower case
         sid = self._nameToSid(key)
-        log().debug('Got series id %s' % (sid))
-        return self.series[sid]
+        log().debug('Got volume id %s' % (sid))
+        return self.volume[sid]
     #end __getitem__
 
     def __repr__(self):
-        return str(self.series)
+        return str(self.volume)
     #end __repr__
 #end Comicvine
 
